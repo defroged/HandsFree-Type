@@ -1,5 +1,3 @@
-// content.js
-
 // ---- UI helpers ----
 function showToast(msg) {
   const id = "openai-dictation-toast";
@@ -63,10 +61,11 @@ function showRecordingIndicator(remainingStart = null) {
   let start = Date.now();
 
   function render() {
-    let txt = "Recording… (hold Ctrl / ⌘)";
+    // --- THIS TEXT IS UPDATED ---
+    let txt = "Recording… (Press Alt+Shift+D to stop)";
     if (remainingStart !== null) {
       const left = Math.max(0, remainingStart - (Date.now() - start) / 1000);
-      txt = `Recording… (hold Ctrl / ⌘) — ${mmss(left)} left this month`;
+      txt = `Recording… (Press Alt+Shift+D to stop) — ${mmss(left)} left this month`;
     }
     el.textContent = txt;
   }
@@ -90,9 +89,9 @@ chrome.runtime.onMessage.addListener((request) => {
 
   // UI start/stop signals
   if (request.type === "ui-recording-started") {
-  showRecordingIndicator(request.remainingSeconds ?? null);
-  return;
-}
+    showRecordingIndicator(request.remainingSeconds ?? null);
+    return;
+  }
   if (request.type === "ui-recording-stopped") {
     hideRecordingIndicator();
     return;
@@ -146,78 +145,4 @@ chrome.runtime.onMessage.addListener((request) => {
 
   // No editable focused: show toast so the user notices
   showToast(text);
-});
-
-// ---- Press-and-hold Ctrl / ⌘ logic ----
-let ctrlHeld = false;
-let metaHeld = false; // ⌘ on macOS
-let recordingRequested = false;
-let comboWhileHeld = false;
-
-function anyModifierHeld() {
-  return ctrlHeld || metaHeld;
-}
-
-function startIfNeeded() {
-  if (recordingRequested) return;
-  recordingRequested = true;
-  // NOTE: We do NOT show the indicator here anymore. We wait for ui-recording-started.
-  chrome.runtime.sendMessage({ type: "start-hold-recording" });
-}
-
-function stopIfNeeded() {
-  if (!recordingRequested) return;
-  recordingRequested = false;
-  chrome.runtime.sendMessage({ type: "stop-hold-recording", discard: comboWhileHeld });
-  // Background will send ui-recording-stopped; hide just in case.
-  hideRecordingIndicator();
-  comboWhileHeld = false;
-}
-
-document.addEventListener("keydown", (e) => {
-  // Start when Ctrl or Meta alone is pressed (no repeat)
-  if (!e.repeat && (e.key === "Control" || e.key === "Meta")) {
-    if (e.key === "Control") ctrlHeld = true;
-    if (e.key === "Meta") metaHeld = true;
-
-    if (anyModifierHeld()) {
-      comboWhileHeld = false;
-      startIfNeeded();
-    }
-    return;
-  }
-
-  // Any other key while a modifier is down marks this as a combo -> discard on release
-  if (anyModifierHeld() && e.key !== "Control" && e.key !== "Meta") {
-    comboWhileHeld = true;
-  }
-}, true);
-
-document.addEventListener("keyup", (e) => {
-  if (e.key === "Control") ctrlHeld = false;
-  if (e.key === "Meta") metaHeld = false;
-
-  // Stop when neither modifier is still held
-  if (!anyModifierHeld()) {
-    stopIfNeeded();
-  }
-}, true);
-
-// Safety: if the tab loses focus or becomes hidden, stop any ongoing recording request.
-window.addEventListener("blur", () => {
-  if (anyModifierHeld() || recordingRequested) {
-    ctrlHeld = false;
-    metaHeld = false;
-    stopIfNeeded();
-  }
-});
-
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "hidden") {
-    if (anyModifierHeld() || recordingRequested) {
-      ctrlHeld = false;
-      metaHeld = false;
-      stopIfNeeded();
-    }
-  }
 });

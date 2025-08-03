@@ -14,6 +14,16 @@
     "tabs",
     "identity"
   ],
+  
+    "commands": {
+    "toggle-dictation": {
+      "suggested_key": {
+        "default": "Alt+Shift+D",
+        "mac": "Alt+Shift+D"
+      },
+      "description": "Start or stop dictation."
+    }
+  },
 
   "host_permissions": [
     "https://asia-northeast1-handsfreetype.cloudfunctions.net/*"

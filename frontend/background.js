@@ -98,6 +98,21 @@ chrome.runtime.onInstalled.addListener(async () => {
   } catch {}
 });
 
+// ---------- Command Listener (New) ----------
+chrome.commands.onCommand.addListener(async (command, tab) => {
+  console.log(`[bg] Command received: ${command}`);
+  if (command === "toggle-dictation") {
+    // If a command is triggered with a specific tab context, use it.
+    // This happens if the user is in a specific window when they press the shortcut.
+    if (tab?.id) {
+      targetTabId = tab.id;
+      pendingTargetTabId = tab.id;
+    }
+    // You already have a perfect function to handle this!
+    await toggleRecordingState();
+  }
+});
+
 // ---------- Messaging ----------
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -135,46 +150,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     // --- Original message handlers ---
-    // From content.js — start recording on Ctrl/Meta down
-    if (message?.type === "start-hold-recording") {
-      const fromTabId = sender?.tab?.id ?? null;
-      if (fromTabId) {
-        targetTabId = fromTabId;
-        pendingTargetTabId = fromTabId;
-      }
-      if (isRecording) return;
-      const granted = await ensureMicPermission();
-      if (!granted) {
-        pendingStartAfterPermission = true;
-        await setBadge("PERM");
-        return;
-      }
-      try {
-        const q = await apiGet("/canStart");
-        lastKnownRemainingSeconds = q.plan === "pro" ? null : q.remainingSeconds;
-        if (lastKnownRemainingSeconds !== null && lastKnownRemainingSeconds <= 0) {
-          await sendErrorToContentScript("Free plan limit reached (10 min/mo). Click the extension icon to upgrade.");
-          return;
-        }
-      } catch (e) {
-        console.warn("Quota check failed", e);
-      }
-      await startOffscreenRecording(pendingTargetTabId || targetTabId);
-      return;
-    }
-    // From content.js — stop on Ctrl/Meta up (with optional discard)
-    if (message?.type === "stop-hold-recording") {
-      discardNextResult = !!message.discard;
-      if (!isRecording && !(await chrome.offscreen.hasDocument())) {
-        pendingStartAfterPermission = false;
-        discardNextResult = false;
-        await setBadge("");
-        await sendUIStopped();
-        return;
-      }
-      await stopOffscreenRecording();
-      return;
-    }
     // Transitions from the offscreen recorder
     if (message?.type === "recording-started") {
       console.log("[bg] recording-started");

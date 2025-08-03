@@ -1,0 +1,37 @@
+<!-- request-mic.html -->
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Microphone permission for Dictation</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: system-ui, sans-serif; margin: 24px; max-width: 720px; }
+    h1 { margin: 0 0 8px; font-size: 22px; }
+    #desc { margin: 0 0 16px; color: #555; }
+    button { padding: 10px 16px; font-size: 14px; cursor: pointer; margin-right: 8px; }
+    pre, code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    #status { margin-top: 16px; padding: 12px; border-radius: 8px; background: rgba(0,0,0,.05); white-space: pre-wrap; }
+    #devices { margin-top: 12px; }
+    .ok { color: #0a0; }
+    .warn { color: #a60; }
+    .err { color: #c00; }
+  </style>
+</head>
+<body>
+  <h1>Microphone permission</h1>
+  <p id="desc">Click <b>Allow microphone</b> to grant access. Then try a short test record.</p>
+
+  <div>
+    <button id="grant">Allow microphone</button>
+    <button id="test" disabled>Test 2s recording</button>
+    <button id="close" disabled>Close</button>
+  </div>
+
+  <div id="status">Status: loading…</div>
+  <div id="devices"></div>
+
+  <script src="request-mic.js"></script>
+</body>
+</html>

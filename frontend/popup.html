@@ -1,0 +1,38 @@
+<!-- popup.html -->
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>HandsFree Type</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 14px; width: 280px; }
+    h3   { margin-top: 0; }
+    button { padding: 8px 12px; cursor: pointer; }
+    #plan { margin-top: 8px; }
+    #plan b { display:inline-block; min-width: 90px; }
+  </style>
+</head>
+<body>
+  <h3>HandsFree Type</h3>
+
+  <div id="signed-out">
+    <p id="status-message">Connecting...</p>
+    <button id="google-btn" style="display:none">Sign in with Google</button>
+  </div>
+
+  <div id="signed-in" style="display:none">
+    <p>👋 <span id="user-email"></span></p>
+    <div id="plan">
+      <p><b>Plan:</b> <span id="plan-name"></span></p>
+      <p><b>Remaining:</b> <span id="plan-left"></span></p>
+    </div>
+    <button id="upgrade-btn"  style="display:none">Upgrade to Pro ($5/mo)</button>
+    <button id="portal-btn"   style="display:none">Manage subscription</button>
+    <button id="signout-btn">Sign out</button>
+  </div>
+
+  <!-- Load popup code as an ES‑module -->
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

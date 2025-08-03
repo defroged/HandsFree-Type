@@ -1,0 +1,14 @@
+# Dependencies
+/frontend/node_modules
+/backend/functions/node_modules
+
+# Build output
+/frontend/dist
+
+# Environment variables & secrets
+# It's good practice to ignore runtime config if it contains secrets
+/backend/.runtimeconfig.json
+
+# OS-specific files
+.DS_Store
+Thumbs.db

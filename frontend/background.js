@@ -92,6 +92,29 @@ let discardNextResult = false;
 let pendingStopResolve = null;
 let pendingStopTimer = null;
 
+// --- Badge Animation ---
+let badgeAnimationTimer = null;
+
+async function startBadgeAnimation() {
+  if (badgeAnimationTimer) return;
+  let frame = 0;
+  const frames = ["·", "··", "···", " ··", "  ·", "   "];
+  const animate = () => {
+    chrome.action.setBadgeText({ text: frames[frame++ % frames.length] });
+  };
+  badgeAnimationTimer = setInterval(animate, 200);
+  animate(); // run once immediately
+}
+
+async function stopBadgeAnimation(finalText = "") {
+  if (badgeAnimationTimer) {
+    clearInterval(badgeAnimationTimer);
+    badgeAnimationTimer = null;
+  }
+  await setBadge(finalText);
+}
+
+
 chrome.runtime.onInstalled.addListener(async () => {
   try {
     await chrome.action.setBadgeBackgroundColor({ color: "#CC0000" });
@@ -181,7 +204,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       if (!b64 || size === 0) {
         console.warn("[bg] Empty/invalid audio data.");
-        await setBadge("0");
+        await stopBadgeAnimation("0");
         if (!discardNextResult) {
           await sendErrorToContentScript("Error: No audio was captured.");
         }
@@ -191,13 +214,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       if (discardNextResult) {
         console.log("[bg] Discarding audio due to key combo.");
-        await setBadge("");
+        await stopBadgeAnimation("");
         await cleanup();
         return;
       }
-
-      await setBadge(""); // Clear "..." badge
-
+      
       // Commit usage first
       try {
         if (recordStartTs) {
@@ -219,7 +240,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 	
     if (message?.type === "audio-error") {
       console.error("[bg] audio-error:", message.error);
-      await setBadge("ERR");
+      await stopBadgeAnimation("ERR");
       if (!discardNextResult) {
         await sendErrorToContentScript(`Error: ${message.error || "Audio pipeline error."}`);
       }
@@ -415,21 +436,24 @@ async function startOffscreenRecording(tabIdFromCaller) {
 }
 
 async function stopOffscreenRecording() {
-  // Nothing to stop?  Just tidy the UI.
+  // Nothing to stop? Just tidy the UI.
   if (!(await chrome.offscreen.hasDocument())) {
     isRecording = false;
-    await setBadge("");
+    await stopBadgeAnimation();
     await sendUIStopped();
     return;
   }
 
   // Ask off-screen page to stop; give it up to 10 s.
   isRecording = false;
-  await setBadge("…");        // “stopping”
+  await startBadgeAnimation(); // Start animating "..."
+  await sendUIStopped(); // Hide the red bar immediately
 
   const ok = await new Promise((resolve) => {
     pendingStopResolve = resolve;
-    try { chrome.runtime.sendMessage({ type: "stop-recording" }); } catch {}
+    try {
+      chrome.runtime.sendMessage({ type: "stop-recording" });
+    } catch {}
     pendingStopTimer = setTimeout(() => {
       console.warn("[bg] Timed out waiting for audio-ready after stop.");
       pendingStopResolve = null;
@@ -438,11 +462,13 @@ async function stopOffscreenRecording() {
   });
 
   if (!ok) {
-    await setBadge("ERR");
+    await stopBadgeAnimation("ERR"); // Stop animation, show error
     if (!discardNextResult) {
-      await sendErrorToContentScript("Error: Timed out waiting for audio. Please try again.");
+      await sendErrorToContentScript(
+        "Error: Timed out waiting for audio. Please try again."
+      );
     }
-    await sendUIStopped();
+    // sendUIStopped is already called
     await closeOffscreenSafe();
   }
 }
@@ -478,12 +504,12 @@ async function processAudio(b64) {
     }
 
     const transcription = result.transcription;
-    await setBadge(""); // Should already be blank, but just in case
+    await stopBadgeAnimation(""); // Should already be blank, but just in case
     await sendTextToContentScript(transcription || "");
 
   } catch (error) {
     console.error("[bg] Transcription failed:", error);
-    await setBadge("ERR");
+    await stopBadgeAnimation("ERR");
     await sendErrorToContentScript(`Error: Transcription failed. ${error.message || String(error)}`);
     // No need to re-throw, error is handled here.
   }

@@ -1,5 +1,3 @@
-<!-- request-mic.html -->
-
 <!doctype html>
 <html>
 <head>
@@ -7,106 +5,113 @@
   <title>Microphone Permission - HandsFree Type</title>
   <style>
     :root {
-      --primary-color: #4A90E2;
-      --success-color: #4CAF50;
-      --warning-color: #FB8C00;
-      --error-color: #D32F2F;
-      --light-gray: #f0f0f0;
-      --dark-gray: #333;
-      --text-color: #333;
-      --bg-color: #fff;
+      --bg-color: #202124;
+      --text-color: #e8eaed;
+      --text-color-secondary: #bdc1c6;
+      --primary-color: #8ab4f8;
+      --container-bg: #2d2e30;
+      --border-color: #5f6368;
     }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --text-color: #f1f1f1;
-        --bg-color: #1e1e1e;
-        --light-gray: #2a2a2a;
-        --dark-gray: #ccc;
-      }
-    }
-    body {
-      font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    html, body {
+      font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
       margin: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
+      padding: 0;
       background-color: var(--bg-color);
       color: var(--text-color);
       line-height: 1.6;
     }
-    .container {
-      max-width: 600px;
-      padding: 40px;
-      text-align: center;
-      background-color: var(--bg-color);
-      border-radius: 12px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-      transition: opacity 0.3s ease;
-    }
-    .icon {
-      font-size: 48px;
-      color: var(--primary-color);
-      margin-bottom: 20px;
-    }
-    h1 {
-      margin: 0 0 16px;
-      font-size: 28px;
-      font-weight: 600;
-    }
-    #desc {
-      margin: 0 0 24px;
-      color: var(--dark-gray);
-      font-size: 16px;
-    }
-    .button-group {
+    body {
       display: flex;
       justify-content: center;
-      gap: 12px;
-      margin-bottom: 24px;
+      padding: 2rem 1rem;
     }
-    button {
-      padding: 12px 24px;
+    .container {
+      max-width: 720px;
+      width: 100%;
+      padding: 2rem 3rem;
+      text-align: left;
+      background-color: var(--container-bg);
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      transition: opacity 0.3s ease;
+    }
+    h1, h2 {
+      font-weight: 500;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    h1 {
+      font-size: 28px;
+      margin-top: 0;
+      color: var(--text-color);
+    }
+    h2 {
+      font-size: 22px;
+      margin-top: 2rem;
+      color: var(--text-color);
+    }
+    p, li {
+      color: var(--text-color-secondary);
+      font-size: 16px;
+    }
+    b, strong {
+      color: var(--text-color);
+      font-weight: 500;
+    }
+    i {
+        font-size: 14px;
+    }
+    ul {
+        list-style-type: '✓ ';
+        padding-left: 20px;
+    }
+    li {
+        padding-left: 10px;
+        margin-bottom: 0.5rem;
+    }
+    .language-list {
+        font-size: 14px;
+        line-height: 1.8;
+        color: var(--text-color-secondary);
+    }
+    .button-container {
+      text-align: center;
+      margin: 2rem 0;
+    }
+    button#grant {
+      background-color: var(--primary-color);
+      color: var(--bg-color);
       font-size: 16px;
       font-weight: 500;
-      cursor: pointer;
+      padding: 12px 24px;
+      border: none;
       border-radius: 8px;
-      border: 1px solid transparent;
-      transition: all 0.2s ease;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
     }
-    #grant {
-      background-color: var(--primary-color);
-      color: white;
-      border-color: var(--primary-color);
+    button#grant:hover {
+      background-color: #a1c7ff;
     }
-    #grant:hover {
-      opacity: 0.9;
-    }
-    #test {
-      background-color: var(--light-gray);
-      color: var(--text-color);
-      border-color: #ccc;
-    }
-    #test:hover {
-      background-color: #e0e0e0;
-    }
-    button:disabled {
+    button#grant:disabled {
       cursor: not-allowed;
       opacity: 0.6;
     }
-    #status, #devices {
-      margin-top: 16px;
+    #status {
+      margin-top: 1rem;
       padding: 12px 16px;
       border-radius: 8px;
-      background: var(--light-gray);
-      text-align: left;
-      white-space: pre-wrap;
+      background: #3c4043;
+      text-align: center;
       font-family: 'Menlo', 'Consolas', monospace;
-      font-size: 13px;
+      font-size: 14px;
+      color: #fce8e6; /* Light red for errors */
     }
-    .ok { color: var(--success-color); }
-    .warn { color: var(--warning-color); }
-    .err { color: var(--error-color); }
+    .footer-text {
+        text-align: center;
+        margin-top: 2rem;
+        font-style: italic;
+    }
 
     /* Success Overlay */
     #success-overlay {
@@ -122,6 +127,7 @@
       flex-direction: column;
       color: white;
       z-index: 100;
+      text-align: center;
     }
     .spinner {
       border: 4px solid rgba(255, 255, 255, 0.3);
@@ -134,6 +140,7 @@
     #success-overlay p {
       margin-top: 20px;
       font-size: 18px;
+      color: white;
     }
     @keyframes spin {
       to { transform: rotate(360deg); }
@@ -142,36 +149,40 @@
 </head>
 <body>
   <div class="container" id="main-container">
-    <div class="icon">🎤</div>
-    <h1>Enable Your Microphone</h1>
-    <p id="desc">
-      HandsFree Type needs access to your microphone to transcribe your voice.
-      Click <b>Allow</b> when your browser asks for permission.
+
+    <h1>Welcome to HandsFree Type! 🎙️</h1>
+    <p>
+      HandsFree Type lets you effortlessly transcribe your voice into text on any webpage. Simply press
+      <b>Alt+Shift+D</b> to start recording, and press it again when you're done. <i>(Note: Longer recordings may take a few moments to transcribe.)</i>
     </p>
 
-    <div class="button-group">
-      <button id="grant">Allow Microphone Access</button>
-      <button id="test" disabled>Test Recording</button>
+    <div class="button-container">
+        <button id="grant">Enable Microphone</button>
     </div>
+    <div id="status" style="display: none;"></div>
 
-    <div id="status">Status: Initializing...</div>
-    <div id="devices" style="display: none;"></div>
-
-    <hr style="border: none; border-top: 1px solid var(--light-gray); margin: 24px 0;">
-    <h2>How to Use</h2>
-    <p id="desc" style="text-align: left;">
-      1.  Press <b>Alt+Shift+D</b> to start recording.<br>
-      2.  The recording indicator will appear at the bottom of the page.<br>
-      3.  Speak clearly. <br>
-      4.  Press <b>Alt+Shift+D</b> again to stop.<br>
-      5.  Your transcribed text will be inserted where your cursor is.
+    <h2>Automatic Language Recognition 🌍</h2>
+    <p>
+      HandsFree Type automatically detects the language you're speaking. We currently support <b>55 languages</b> with excellent accuracy:
     </p>
+    <p class="language-list">
+      Afrikaans, Arabic, Armenian, Azerbaijani, Belarusian, Bosnian, Bulgarian, Catalan, Chinese, Croatian, Czech, Danish, Dutch, English, Estonian, Finnish, French, Galician, German, Greek, Hebrew, Hindi, Hungarian, Icelandic, Indonesian, Italian, Japanese, Kannada, Kazakh, Korean, Latvian, Lithuanian, Macedonian, Malay, Marathi, Maori, Nepali, Norwegian, Persian, Polish, Portuguese, Romanian, Russian, Serbian, Slovak, Slovenian, Spanish, Swahili, Swedish, Tagalog, Tamil, Thai, Turkish, Ukrainian, Urdu, Vietnamese, and Welsh.
+    </p>
+    <p>We also support <b>44 additional languages</b> with moderate accuracy.</p>
+
+    <h2>Usage Limits ⏰</h2>
+    <ul>
+      <li><b>Free Accounts:</b> Enjoy up to <b>10 minutes</b> of transcription each month.</li>
+      <li><b>Premium Accounts ($5/month):</b> Unlock up to <b>4 hours</b> of transcription per month.</li>
+    </ul>
+
+    <p class="footer-text">Start speaking and typing hands-free!</p>
 
   </div>
 
   <div id="success-overlay">
     <div class="spinner"></div>
-    <p>Please hold on while we set things up...</p>
+    <p>Permission granted! Setting things up...</p>
   </div>
 
   <script src="dist/request-mic.js"></script>

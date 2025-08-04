@@ -70,10 +70,12 @@ exports.canStart = onRequest({ region: "asia-northeast1" }, async (req, res) => 
     const usageRef = db.doc(`usage/${uid}/months/${yyyyMM}`);
     const snap = await usageRef.get();
     const used = snap.exists ? snap.data().secondsUsed || 0 : 0;
-    const FREE_CAP_SECONDS = 10 * 60;
-    const remainingSeconds = plan === "pro" ?
-      Number.MAX_SAFE_INTEGER :
-      Math.max(0, FREE_CAP_SECONDS - used);
+    const FREE_CAP_SECONDS = 10 * 60; // 10 minutes for free users
+    const PRO_CAP_SECONDS = 2 * 60 * 60; // 2 hours for pro users
+
+    const cap = plan === "pro" ? PRO_CAP_SECONDS : FREE_CAP_SECONDS;
+    const remainingSeconds = Math.max(0, cap - used);
+
     res.json({ plan, remainingSeconds });
   } catch (e) {
     console.error("canStart error:", e);
@@ -88,17 +90,14 @@ exports.commitUsage = onRequest({ region: "asia-northeast1" }, async (req, res) 
   try {
     const uid = await verifyIdToken(req);
     const elapsedSec = Math.max(0, Math.floor(req.body?.elapsedSeconds || 0));
-    const user = (await db.doc(`users/${uid}`).get()).data() || {};
-    const plan = user.plan === "pro" ? "pro" : "free";
-    if (plan === "pro") return res.json({ ok: true });
     const yyyyMM = ymKey();
     const usageRef = db.doc(`usage/${uid}/months/${yyyyMM}`);
-    const FREE_CAP_SECONDS = 10 * 60;
+
     await db.runTransaction(async (tx) => {
       const doc = await tx.get(usageRef);
       const prev = doc.exists ? doc.data().secondsUsed || 0 : 0;
       tx.set(usageRef, {
-        secondsUsed: Math.min(FREE_CAP_SECONDS, prev + elapsedSec),
+        secondsUsed: prev + elapsedSec,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       }, { merge: true });
     });

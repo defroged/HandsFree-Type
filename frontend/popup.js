@@ -51,7 +51,7 @@ async function refreshPlan() {
     planName.textContent = isPro ? 'Pro' : 'Free';
     // Ensure remainingSeconds is a number before doing math with it
     const remainingMinutes = Math.floor((remainingSeconds || 0) / 60);
-    planLeft.textContent = isPro ? '(unlimited)' : `(${remainingMinutes} min left)`;
+    planLeft.textContent = `(${remainingMinutes} min left)`;
     upgradeBtn.style.display = isPro ? 'none' : 'block';
     portalBtn.style.display = isPro ? 'block' : 'none';
   } catch (e) {

@@ -13,9 +13,10 @@ function setStatus(text) {
 }
 
 // Informs the background script about the permission result.
-async function sendPermission(state, error) {
+function sendPermission(state, error) {
   try {
-    await chrome.runtime.sendMessage({ type: "mic-permission", state, error });
+    // We don't need to wait for a response, so we don't use await here.
+    chrome.runtime.sendMessage({ type: "mic-permission", state, error });
   } catch (e) {
     // This can happen if the user closes the tab before the message is sent.
     console.warn("Could not send permission to background script.", e);
@@ -28,10 +29,11 @@ async function showSuccessAndClose() {
     successOverlay.style.display = 'flex';
   
     // Let the background script know permission was granted so it can start recording.
-    await sendPermission("granted");
+    // The 'await' is removed here to prevent waiting for a response.
+    sendPermission("granted");
   
     // Close this tab after a brief moment.
-    setTimeout(() => window.close(), 2000);
+    setTimeout(() => window.close(), 1500);
 }
 
 // Handles the logic for requesting microphone access.
@@ -85,7 +87,7 @@ async function queryState() {
 }
 
 // Initial setup when the page loads.
-(async () => {
+document.addEventListener('DOMContentLoaded', async () => {
   grantBtn.addEventListener("click", requestMic);
   const initialState = await queryState();
   console.log('[request-mic] Initial permission state:', initialState);
@@ -94,8 +96,5 @@ async function queryState() {
     // If permission is already granted, we don't need user interaction.
     // Proceed directly to the success flow.
     await showSuccessAndClose();
-  } else {
-    // If state is 'prompt' or 'denied', the page will wait for the user to click the button.
-    // No status message is needed initially for a cleaner look.
   }
-})();
+});

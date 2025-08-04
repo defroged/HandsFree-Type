@@ -15,9 +15,6 @@ function setStatus(text, cls) {
 async function sendPermission(state, error) {
   chrome.runtime.sendMessage({ type: "mic-permission", state, error });
 }
-async function sendStatus(state, error) {
-  chrome.runtime.sendMessage({ type: "mic-permission-status", state, error });
-}
 
 async function showDevices() {
   try {
@@ -58,14 +55,26 @@ async function requestMic() {
     t.onunmute = () => setStatus(`Track unmuted. ${logTrack(t)}`, "ok");
     t.onended = () => setStatus(`Track ended. ${logTrack(t)}`, "warn");
 
+    // We have the permission now, we don't need to hold the stream open here.
+    // The offscreen document will request its own stream.
     stream.getTracks().forEach(tr => tr.stop());
+    
     await showDevices();
     const after = await queryState();
     setStatus(`Current permission state: ${after}`, "ok");
 
+    // Enable the test/close buttons in case the user wants to debug,
+    // but also message the background script that we're done and close this tab.
     testBtn.disabled = false;
     closeBtn.disabled = false;
     await sendPermission("granted");
+
+    // Auto-close the tab on success after a short delay so the user can see the status.
+    setStatus("Permission granted! This tab will close automatically.", "ok");
+    setTimeout(() => {
+        window.close();
+    }, 1500);
+
   } catch (e) {
     console.error("[request-mic] getUserMedia error:", e);
     setStatus(`Error requesting microphone: ${e.name || ""} ${e.message || e}`, "err");
@@ -134,16 +143,8 @@ async function testRecord2s() {
   }
 }
 
-async function reportStatusOnly() {
-  const state = await queryState();
-  await sendStatus(state);
-}
-
 (async () => {
-  if (location.hash === "#query") {
-    await reportStatusOnly();
-    return;
-  }
+  // The logic for hash checking and reportStatusOnly is no longer needed.
   setStatus("Loading…");
   await showDevices();
   const init = await queryState();

@@ -274,10 +274,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       return;
     }
-    if (message?.type === "mic-permission-status") {
-      console.log("[bg] mic-permission-status:", message.state);
-      return;
-    }
+    // "mic-permission-status" handler is removed as it's no longer needed.
   };
 
   handleMessage()
@@ -350,45 +347,24 @@ async function toggleRecordingState() {
 }
 
 async function ensureMicPermission() {
-  const state = await queryMicPermissionInTab();
-  console.log("[bg] mic permission probe:", state);
-  if (state === "granted") return true;
+  // Service workers can query permissions directly. No need for a helper tab.
+  const p = await navigator.permissions.query({ name: "microphone" });
+  console.log("[bg] mic permission probe:", p.state);
 
+  if (p.state === "granted") {
+    return true;
+  }
+
+  // If permission is not granted, open our dedicated page for the user to
+  // click the button that will trigger the browser's permission prompt.
   await chrome.tabs.create({
     url: chrome.runtime.getURL("request-mic.html"),
     active: true
   });
-  return false; // we'll resume when "mic-permission: granted" arrives
-}
-
-async function queryMicPermissionInTab() {
-  const url = chrome.runtime.getURL("request-mic.html#query");
-  const tab = await chrome.tabs.create({ url, active: false });
-
-  return await new Promise((resolve) => {
-    let settled = false;
-    const timeoutMs = 8000;
-    const timer = setTimeout(async () => {
-      if (settled) return;
-      settled = true;
-      console.warn("[bg] mic-permission-status timed out.");
-      try { await chrome.tabs.remove(tab.id); } catch {}
-      resolve("unknown");
-    }, timeoutMs);
-
-    const listener = async (message, sender) => {
-      if (sender.tab?.id !== tab.id) return;
-      if (message?.type === "mic-permission-status") {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        chrome.runtime.onMessage.removeListener(listener);
-        try { await chrome.tabs.remove(tab.id); } catch {}
-        resolve(message.state || "unknown");
-      }
-    };
-    chrome.runtime.onMessage.addListener(listener);
-  });
+  
+  // Return false because we need to wait for the user's action.
+  // The 'mic-permission: granted' message from request-mic.js will resume the flow.
+  return false;
 }
 
 async function startOffscreenRecording(tabIdFromCaller) {

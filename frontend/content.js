@@ -143,6 +143,13 @@ chrome.runtime.onMessage.addListener((request) => {
     return;
   }
 
-  // No editable focused: show toast so the user notices
-  showToast(text);
+  // Fallback for complex editors (like Google Docs) or when no field is focused.
+  try {
+    navigator.clipboard.writeText(text);
+    showToast(`Text copied. Press Ctrl+V to paste.`);
+  } catch (err) {
+    console.error('Failed to copy text:', err);
+    // If clipboard fails, fall back to the original toast behavior.
+    showToast(text);
+  }
 });

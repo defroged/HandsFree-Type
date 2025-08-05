@@ -3,7 +3,7 @@
 
   "name": "HandsFree Type",
   "version": "1.0",
-  "description": "HandsFree Type allows you to dictate text on any website using advanced speech-to-text technology. Simply press Alt+Shift+D to start and stop.",
+  "description": "HandsFree Type: multilingual speech-to-text dictation on any site. Press Alt+Shift+D to easily start or stop voice recording.",
   "minimum_chrome_version": "116",
 
 "permissions": [

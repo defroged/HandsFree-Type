@@ -3,7 +3,7 @@
 
   "name": "HandsFree Type",
   "version": "1.0",
-  "description": "Uses OpenAI for dictation.",
+  "description": "HandsFree Type allows you to dictate text on any website using advanced speech-to-text technology. Simply press Alt+Shift+D to start and stop.",
   "minimum_chrome_version": "116",
 
 "permissions": [
@@ -52,7 +52,7 @@
 
   "action": {
     "default_popup": "popup.html",
-    "default_icon": "handsfree-128.png"
+    "default_icon": "icon.png"
   },
 
   "web_accessible_resources": [
@@ -67,7 +67,10 @@
     }
   ],
 
-  "icons": {
-    "128": "icon.png"
-  }
+	"icons": {
+		"16": "icon16.png",
+		"32": "icon32.png",
+		"48": "icon48.png",
+		"128": "icon.png"
+	}
 }

@@ -34,6 +34,40 @@ function mmss(sec) {
   return Math.floor(sec / 60) + ":" + (sec % 60).toString().padStart(2, "0");
 }
 
+function showTemporaryIndicator(msg) {
+  const id = "openai-dictation-indicator";
+  let el = document.getElementById(id);
+  if (!el) {
+    el = document.createElement("div");
+    el.id = id;
+    el.style.position = "fixed";
+    el.style.left = "0";
+    el.style.right = "0";
+    el.style.bottom = "0";
+    el.style.background = "#b30000";
+    el.style.color = "#fff";
+    el.style.padding = "10px 14px";
+    el.style.fontFamily = "system-ui, sans-serif";
+    el.style.fontSize = "13px";
+    el.style.display = "flex";
+    el.style.justifyContent = "center";
+    el.style.alignItems = "center";
+    el.style.zIndex = "2147483647";
+    el.style.boxShadow = "0 -4px 16px rgba(0,0,0,.25)";
+    document.documentElement.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.display = "flex";
+  // Ensure the countdown timer from a previous recording is stopped
+  if (countdownTimer) {
+    clearInterval(countdownTimer);
+    countdownTimer = null;
+  }
+  // Hide the message after 4 seconds
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.style.display = "none"; }, 4000);
+}
+
 function showRecordingIndicator(remainingStart = null) {
   const id = "openai-dictation-indicator";
   let el = document.getElementById(id);
@@ -57,6 +91,7 @@ function showRecordingIndicator(remainingStart = null) {
     document.documentElement.appendChild(el);
   }
   el.style.display = "flex";
+  clearTimeout(el._t); // Cancel any pending hide timers
 
   let start = Date.now();
 
@@ -94,6 +129,11 @@ chrome.runtime.onMessage.addListener((request) => {
   }
   if (request.type === "ui-recording-stopped") {
     hideRecordingIndicator();
+    return;
+  }
+  // New handler for showing an error in the bottom bar
+  if (request.type === "ui-show-error-bar") {
+    if (request.text) showTemporaryIndicator(request.text);
     return;
   }
 

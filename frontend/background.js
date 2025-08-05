@@ -22,13 +22,17 @@ const auth = getAuth();
 let currentUser = null;
 let authReadyPromise = null;
 
-function showErrorNotification(message) {
+function showInfoNotification(title, message) {
   chrome.notifications.create({
     type: 'basic',
     iconUrl: 'icon.png',
-    title: 'HandsFree Type Error',
-    message: message || 'An unexpected error occurred.'
+    title: title,
+    message: message
   });
+}
+
+function showErrorNotification(message) {
+  showInfoNotification('HandsFree Type Error', message || 'An unexpected error occurred.');
 }
 
 // Create a promise that resolves when the first auth state is known
@@ -333,12 +337,37 @@ async function apiPost(path, body = {}) {
 
 async function toggleRecordingState() {
   if (!isRecording) {
-    const granted = await ensureMicPermission();
-    if (!granted) {
-      pendingStartAfterPermission = true;
-      return;
+    try {
+      // Check if user can start before doing anything else
+      const { plan, remainingSeconds } = await apiGet('/canStart');
+      lastKnownRemainingSeconds = remainingSeconds; // Cache the latest value
+
+      if (remainingSeconds <= 0) {
+        const planName = plan === 'pro' ? 'Pro' : 'Free';
+        const message = `You've used up all your transcription time for the ${planName} plan this month. You can wait until next month or upgrade now to continue.`;
+        
+        const tabId = await getPasteTargetTabId();
+        if (tabId) {
+          await sendToTab(tabId, { type: "ui-show-error-bar", text: message });
+        } else {
+            // Fallback to a notification if we can't find a tab to show the bar on
+            showInfoNotification('Usage Limit Reached', message);
+        }
+        
+        await setBadge("0");
+        return;
+      }
+
+      const granted = await ensureMicPermission();
+      if (!granted) {
+        pendingStartAfterPermission = true;
+        return;
+      }
+      await startOffscreenRecording(targetTabId);
+    } catch (e) {
+      showErrorNotification(`Could not verify usage: ${e.message}`);
+      await setBadge("ERR");
     }
-    await startOffscreenRecording(targetTabId);
   } else {
     await stopOffscreenRecording();
   }

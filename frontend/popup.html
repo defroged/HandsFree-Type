@@ -6,33 +6,158 @@
   <meta charset="utf-8">
   <title>HandsFree Type</title>
   <style>
-    body { font-family: system-ui, sans-serif; margin: 0; padding: 14px; width: 280px; }
-    h3   { margin-top: 0; }
-    button { padding: 8px 12px; cursor: pointer; }
-    #plan { margin-top: 8px; }
-    #plan b { display:inline-block; min-width: 90px; }
+    :root {
+      --bg-color: #202124;
+      --text-color: #e8eaed;
+      --text-color-secondary: #bdc1c6;
+      --primary-color: #8ab4f8;
+      --container-bg: #2d2e30;
+      --border-color: #5f6368;
+      --button-hover: #a1c7ff;
+      --button-secondary-bg: #3c4043;
+      --button-secondary-hover: #4d5053;
+    }
+    body {
+      font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+      margin: 0;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      width: 320px;
+      padding: 1rem;
+      box-sizing: border-box;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 1rem;
+      margin-bottom: 1rem;
+    }
+    .header img {
+      width: 32px;
+      height: 32px;
+    }
+    .header h3 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 500;
+    }
+    .spinner {
+      border: 3px solid var(--border-color);
+      border-top-color: var(--primary-color);
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s ease-in-out infinite;
+      margin: 2rem auto;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    #loading-view p {
+        text-align: center;
+        color: var(--text-color-secondary);
+        font-size: 14px;
+    }
+    #signed-in p, #signed-out p {
+        font-size: 14px;
+        color: var(--text-color-secondary);
+        line-height: 1.5;
+    }
+    #signed-in p b, #signed-in p strong {
+        color: var(--text-color);
+        font-weight: 500;
+    }
+    #user-email {
+        font-weight: 500;
+        color: var(--text-color);
+        word-break: break-all;
+    }
+    .button-group {
+        margin-top: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    button {
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.2s ease, opacity 0.2s ease;
+      text-align: center;
+    }
+    button.primary {
+      background-color: var(--primary-color);
+      color: var(--bg-color);
+    }
+    button.primary:hover {
+      background-color: var(--button-hover);
+    }
+    button.secondary {
+        background-color: var(--button-secondary-bg);
+        color: var(--text-color);
+        border: 1px solid var(--border-color);
+    }
+    button.secondary:hover {
+        background-color: var(--button-secondary-hover);
+    }
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    #plan-info {
+        margin-top: 1rem;
+        padding: 12px;
+        background-color: var(--container-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+    }
+    #plan-info p {
+        margin: 0;
+        padding: 4px 0;
+        display: flex;
+        justify-content: space-between;
+    }
   </style>
 </head>
 <body>
-  <h3>HandsFree Type</h3>
-
-  <div id="signed-out">
-    <p id="status-message">Connecting...</p>
-    <button id="google-btn" style="display:none">Sign in with Google</button>
+  <div class="header">
+    <img src="icon.png" alt="HandsFree Type Icon">
+    <h3>HandsFree Type</h3>
   </div>
 
-  <div id="signed-in" style="display:none">
-    <p>👋 <span id="user-email"></span></p>
-    <div id="plan">
-      <p><b>Plan:</b> <span id="plan-name"></span></p>
-      <p><b>Remaining:</b> <span id="plan-left"></span></p>
+  <div id="loading-view">
+    <div class="spinner"></div>
+    <p>Connecting...</p>
+  </div>
+
+  <div id="signed-out-view" style="display:none">
+    <p>Please sign in to use the extension and transcribe your voice.</p>
+    <div class="button-group">
+      <button id="google-btn" class="primary">Sign in with Google</button>
     </div>
-    <button id="upgrade-btn"  style="display:none">Upgrade to Pro ($5/mo)</button>
-    <button id="portal-btn"   style="display:none">Manage subscription</button>
-    <button id="signout-btn">Sign out</button>
   </div>
 
-  <!-- Load popup code as an ES‑module -->
+  <div id="signed-in-view" style="display:none">
+    <p>Signed in as <strong id="user-email"></strong></p>
+    
+    <div id="plan-info">
+      <p><b>Plan:</b> <span id="plan-name"></span></p>
+      <p><b>Usage Left:</b> <span id="plan-left"></span></p>
+    </div>
+
+    <div class="button-group">
+      <button id="upgrade-btn" class="primary" style="display:none">Upgrade to Pro ($5/mo)</button>
+      <button id="portal-btn" class="primary" style="display:none">Manage Subscription</button>
+      <button id="signout-btn" class="secondary">Sign Out</button>
+    </div>
+  </div>
+
   <script type="module" src="dist/popup.js"></script>
 </body>
 </html>

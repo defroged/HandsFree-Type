@@ -22,24 +22,28 @@ const auth = getAuth();
 let currentUser = null;
 let authReadyPromise = null;
 
+function showErrorNotification(message) {
+  chrome.notifications.create({
+    type: 'basic',
+    iconUrl: 'icon.png',
+    title: 'HandsFree Type Error',
+    message: message || 'An unexpected error occurred.'
+  });
+}
+
 // Create a promise that resolves when the first auth state is known
 const initializeAuth = () => {
   if (authReadyPromise) return;
   authReadyPromise = new Promise(resolve => {
     onAuthStateChanged(auth, (user) => {
       currentUser = user;
-      if (user) {
-        console.log('[bg] Auth state changed: Logged in as', user.email);
-      } else {
-        console.log('[bg] Auth state changed: Logged out.');
-      }
       // Notify popup if it's open
       chrome.runtime.sendMessage({ type: 'auth-state-changed', user: user ? { email: user.email } : null }).catch(() => {});
 
       // Resolve the promise on the first check to unblock API calls
       resolve();
     }, (error) => {
-      console.error('[bg] onAuthStateChanged error:', error);
+      showErrorNotification('There was an issue with authentication. Please try signing in again.');
       resolve(); // Resolve even on error to not block forever
     });
   });
@@ -51,7 +55,7 @@ async function silentSignIn() {
   return new Promise((resolve) => {
     chrome.identity.getAuthToken({ interactive: false }, async (accessToken) => {
       if (chrome.runtime.lastError || !accessToken) {
-        console.warn('[bg] Silent sign-in failed:', chrome.runtime.lastError?.message);
+        // This is an expected condition (user is not signed in), so no notification is needed.
         resolve(false);
         return;
       }
@@ -60,7 +64,7 @@ async function silentSignIn() {
         await signInWithCredential(auth, cred);
         resolve(true);
       } catch (e) {
-        console.error('[bg] silent signInWithCredential failed', e);
+        // Don't show a notification for silent sign-in failures
         resolve(false);
       }
     });
@@ -123,7 +127,6 @@ chrome.runtime.onInstalled.addListener(async () => {
 
 // ---------- Command Listener (New) ----------
 chrome.commands.onCommand.addListener(async (command, tab) => {
-  console.log(`[bg] Command received: ${command}`);
   if (command === "toggle-dictation") {
     // If a command is triggered with a specific tab context, use it.
     // This happens if the user is in a specific window when they press the shortcut.
@@ -175,7 +178,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // --- Original message handlers ---
     // Transitions from the offscreen recorder
     if (message?.type === "recording-started") {
-      console.log("[bg] recording-started");
       recordStartTs = Date.now();
       await setBadge("REC");
       await sendUIStarted(lastKnownRemainingSeconds);
@@ -184,7 +186,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message?.type === "audio-ready-b64") {
       const b64 = message.b64 || "";
       const size = message.size || 0;
-      console.log("[bg] audio-ready-b64 received, size:", size);
 
       // Fulfill the promise for stopOffscreenRecording
       if (pendingStopResolve) {
@@ -203,7 +204,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       };
 
       if (!b64 || size === 0) {
-        console.warn("[bg] Empty/invalid audio data.");
         await stopBadgeAnimation("0");
         if (!discardNextResult) {
           await sendErrorToContentScript("Error: No audio was captured.");
@@ -213,7 +213,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
 
       if (discardNextResult) {
-        console.log("[bg] Discarding audio due to key combo.");
         await stopBadgeAnimation("");
         await cleanup();
         return;
@@ -226,7 +225,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           await apiPost("/commitUsage", { elapsedSeconds: elapsed });
         }
       } catch (e) {
-        console.warn("commitUsage failed", e);
+        showErrorNotification('Could not save your usage data. Please check your connection.');
       } finally {
         recordStartTs = null;
         lastKnownRemainingSeconds = null;
@@ -239,7 +238,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 	
     if (message?.type === "audio-error") {
-      console.error("[bg] audio-error:", message.error);
+      showErrorNotification(message.error || "An unknown error occurred while recording audio.");
       await stopBadgeAnimation("ERR");
       if (!discardNextResult) {
         await sendErrorToContentScript(`Error: ${message.error || "Audio pipeline error."}`);
@@ -259,13 +258,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Permission reporting from request-mic.html
     if (message?.type === "mic-permission") {
       if (message.state === "granted") {
-        console.log("[bg] Mic permission granted.");
         if (pendingStartAfterPermission) {
           pendingStartAfterPermission = false;
           await startOffscreenRecording(pendingTargetTabId || targetTabId);
         }
       } else {
-        console.warn("[bg] Mic permission not granted:", message.error || message.state);
+        showErrorNotification('Microphone permission not granted. Please allow microphone access to use dictation.');
         await setBadge("ERR");
         if (!discardNextResult) {
           await sendErrorToContentScript(`Error: Microphone permission not granted. ${message.error || ""}`);
@@ -284,7 +282,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
     })
     .catch(error => {
-      console.error("[bg] Message handler error:", error);
+      showErrorNotification(`An internal error occurred: ${error.message}`);
       sendResponse({ error: error.message });
     });
 
@@ -297,7 +295,7 @@ async function getAuthToken() {
     try {
       return await auth.currentUser.getIdToken();
     } catch (e) {
-      console.error('[bg] Error getting ID token', e);
+      showErrorNotification('Could not verify your session. Please try signing in again.');
       return null;
     }
   }
@@ -349,7 +347,6 @@ async function toggleRecordingState() {
 async function ensureMicPermission() {
   // Service workers can query permissions directly. No need for a helper tab.
   const p = await navigator.permissions.query({ name: "microphone" });
-  console.log("[bg] mic permission probe:", p.state);
 
   if (p.state === "granted") {
     return true;
@@ -369,7 +366,6 @@ async function ensureMicPermission() {
 
 async function startOffscreenRecording(tabIdFromCaller) {
   if (creatingOffscreen) {
-    console.log("[bg] startOffscreenRecording: already creating, skip.");
     return;
   }
   creatingOffscreen = true;
@@ -382,27 +378,24 @@ async function startOffscreenRecording(tabIdFromCaller) {
         const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
         targetTabId = tabs?.[0]?.id ?? null;
       } catch (e) {
-        console.warn("[bg] failed to get active tab:", e);
         targetTabId = null;
       }
     }
-    console.log("[bg] targetTabId set to:", targetTabId);
 
     if (await chrome.offscreen.hasDocument()) {
-      console.log("[bg] Offscreen already exists.");
+      // Document already exists, which is fine.
     } else {
       await chrome.offscreen.createDocument({
         url: "offscreen.html",
         reasons: ["USER_MEDIA"],
         justification: "Recording audio for transcription"
       });
-      console.log("[bg] Offscreen document created.");
     }
 
     // IMPORTANT: do NOT set "REC" yet; wait for `recording-started` from offscreen.
     isRecording = true;
   } catch (e) {
-    console.error("[bg] Failed to create offscreen document:", e);
+    showErrorNotification(`Failed to start the recorder: ${e.message}`);
     await setBadge("ERR");
     await sendErrorToContentScript(`Error: Failed to start recorder. ${String(e)}`);
     await sendUIStopped();
@@ -431,7 +424,7 @@ async function stopOffscreenRecording() {
       chrome.runtime.sendMessage({ type: "stop-recording" });
     } catch {}
     pendingStopTimer = setTimeout(() => {
-      console.warn("[bg] Timed out waiting for audio-ready after stop.");
+      showErrorNotification("Recording timed out. Please try again.");
       pendingStopResolve = null;
       resolve(false);
     }, 10_000);
@@ -453,10 +446,11 @@ async function closeOffscreenSafe() {
   try {
     if (await chrome.offscreen.hasDocument()) {
       await chrome.offscreen.closeDocument();
-      console.log("[bg] Offscreen document closed.");
     }
   } catch (e) {
-    console.warn("[bg] closeOffscreenSafe error:", e);
+    if (!e.message.includes('The offscreen document is not open.')) {
+        showErrorNotification(`Could not close the recording document: ${e.message}`);
+    }
   }
 }
 
@@ -470,8 +464,6 @@ async function setBadge(text) {
 
 async function processAudio(b64) {
   try {
-    console.log('[bg] Sending audio to secure backend for transcription...');
-    
     // Call your backend function with the base64 string directly
     const result = await apiPost('/transcribeAudio', { b64 });
 
@@ -484,7 +476,7 @@ async function processAudio(b64) {
     await sendTextToContentScript(transcription || "");
 
   } catch (error) {
-    console.error("[bg] Transcription failed:", error);
+    showErrorNotification(`Transcription failed: ${error.message || 'Please check your internet connection and try again.'}`);
     await stopBadgeAnimation("ERR");
     await sendErrorToContentScript(`Error: Transcription failed. ${error.message || String(error)}`);
     // No need to re-throw, error is handled here.
@@ -511,10 +503,10 @@ async function sendToTab(tabId, payload) {
     return true;
   } catch (e) {
     if (e?.message?.includes("Could not establish connection")) {
-      console.debug("[bg] No content script in tab", tabId);
+      // This is expected if the content script is not injected on the page.
       return false;
     }
-    console.warn("[bg] sendMessage error:", e);
+    showErrorNotification(`Could not communicate with the active tab: ${e.message}`);
     return false;
   }
 }

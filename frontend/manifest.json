@@ -6,13 +6,14 @@
   "description": "Uses OpenAI for dictation.",
   "minimum_chrome_version": "116",
 
-  "permissions": [
+"permissions": [
     "storage",
     "activeTab",
     "scripting",
     "offscreen",
     "tabs",
-    "identity"
+    "identity",
+    "notifications"
   ],
   
     "commands": {

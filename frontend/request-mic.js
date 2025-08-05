@@ -9,7 +9,6 @@ const successOverlay = document.getElementById("success-overlay");
 function setStatus(text) {
   statusEl.textContent = text;
   statusEl.style.display = 'block'; // Make it visible
-  console.warn("[request-mic]", text);
 }
 
 // Informs the background script about the permission result.
@@ -19,7 +18,7 @@ function sendPermission(state, error) {
     chrome.runtime.sendMessage({ type: "mic-permission", state, error });
   } catch (e) {
     // This can happen if the user closes the tab before the message is sent.
-    console.warn("Could not send permission to background script.", e);
+    // The user doesn't need to see this error, so we can ignore it.
   }
 }
 
@@ -54,17 +53,15 @@ async function requestMic() {
     await showSuccessAndClose();
 
   } catch (e) {
-    console.error("[request-mic] getUserMedia error:", e);
-    
-    let errorMessage = `Error: ${e.message}`;
+    let errorMessage = `An unexpected error occurred: ${e.message}.`;
     if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
-        errorMessage = 'Permission denied. You may need to grant access in your browser or OS settings if you previously blocked it.';
+        errorMessage = 'Microphone permission was denied. To use this extension, please grant access. You may need to do this in your browser\'s settings if you have previously blocked it.';
     } else if (e.name === 'NotFoundError' || e.name === 'DevicesNotFoundError') {
-        errorMessage = 'No microphone found. Please ensure a microphone is connected and enabled.';
+        errorMessage = 'No microphone was found. Please make sure a microphone is connected and enabled in your system settings.';
     }
     
     setStatus(errorMessage);
-    await sendPermission("denied", e.message);
+    await sendPermission("denied", errorMessage);
 
     // Re-enable the button so the user can try again.
     grantBtn.disabled = false;
@@ -80,7 +77,7 @@ async function queryState() {
     const p = await navigator.permissions.query({ name: "microphone" });
     return p.state;
   } catch (err) {
-    console.error("Permission query failed:", err);
+    setStatus('Could not query microphone permission state. Please try clicking the button.');
     // Fallback if the query API itself fails or isn't supported.
     return "unknown";
   }
@@ -90,7 +87,6 @@ async function queryState() {
 document.addEventListener('DOMContentLoaded', async () => {
   grantBtn.addEventListener("click", requestMic);
   const initialState = await queryState();
-  console.log('[request-mic] Initial permission state:', initialState);
 
   if (initialState === 'granted') {
     // If permission is already granted, we don't need user interaction.

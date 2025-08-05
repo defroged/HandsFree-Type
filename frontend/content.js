@@ -41,23 +41,21 @@ function showTemporaryIndicator(msg) {
     el = document.createElement("div");
     el.id = id;
     el.style.position = "fixed";
-    el.style.left = "0";
-    el.style.right = "0";
-    el.style.bottom = "0";
+    el.style.right = "20px";
+    el.style.bottom = "20px";
     el.style.background = "#b30000";
     el.style.color = "#fff";
     el.style.padding = "10px 14px";
     el.style.fontFamily = "system-ui, sans-serif";
     el.style.fontSize = "13px";
-    el.style.display = "flex";
-    el.style.justifyContent = "center";
-    el.style.alignItems = "center";
+    el.style.borderRadius = "6px";
     el.style.zIndex = "2147483647";
-    el.style.boxShadow = "0 -4px 16px rgba(0,0,0,.25)";
+    el.style.boxShadow = "0 6px 24px rgba(0,0,0,.25)";
+    el.style.maxWidth = "300px";
     document.documentElement.appendChild(el);
   }
   el.textContent = msg;
-  el.style.display = "flex";
+  el.style.display = "block";
   // Ensure the countdown timer from a previous recording is stopped
   if (countdownTimer) {
     clearInterval(countdownTimer);
@@ -75,22 +73,20 @@ function showRecordingIndicator(remainingStart = null) {
     el = document.createElement("div");
     el.id = id;
     el.style.position = "fixed";
-    el.style.left = "0";
-    el.style.right = "0";
-    el.style.bottom = "0";
+    el.style.right = "20px";
+    el.style.bottom = "20px";
     el.style.background = "#b30000";
     el.style.color = "#fff";
     el.style.padding = "10px 14px";
     el.style.fontFamily = "system-ui, sans-serif";
     el.style.fontSize = "13px";
-    el.style.display = "flex";
-    el.style.justifyContent = "center";
-    el.style.alignItems = "center";
+    el.style.borderRadius = "6px";
     el.style.zIndex = "2147483647";
-    el.style.boxShadow = "0 -4px 16px rgba(0,0,0,.25)";
+    el.style.boxShadow = "0 6px 24px rgba(0,0,0,.25)";
+    el.style.maxWidth = "300px";
     document.documentElement.appendChild(el);
   }
-  el.style.display = "flex";
+  el.style.display = "block";
   clearTimeout(el._t); // Cancel any pending hide timers
 
   let start = Date.now();

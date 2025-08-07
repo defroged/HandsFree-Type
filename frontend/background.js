@@ -345,15 +345,12 @@ async function toggleRecordingState() {
       }
       
       // Inject the content script programmatically.
-      // This is allowed because the user triggered this via a command.
       try {
         await chrome.scripting.executeScript({
           target: { tabId: tabId },
           files: ['dist/content.js']
         });
       } catch (e) {
-        // This can fail on special pages like chrome://, which is expected.
-        // We can log it and continue; subsequent messages will fail gracefully.
         console.log(`Could not inject script into tab ${tabId}: ${e.message}`);
       }
 
@@ -374,7 +371,6 @@ async function toggleRecordingState() {
       const granted = await ensureMicPermission();
       if (!granted) {
         pendingStartAfterPermission = true;
-        // The pendingTargetTabId is already set by the command listener.
         return;
       }
       await startOffscreenRecording(tabId);

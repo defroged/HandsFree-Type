@@ -1,12 +1,10 @@
 {
   "manifest_version": 3,
-
   "name": "HandsFree Type",
   "version": "1.0",
   "description": "HandsFree Type: multilingual speech-to-text dictation on any site. Press Alt+Shift+D to easily start or stop voice recording.",
   "minimum_chrome_version": "116",
-
-"permissions": [
+  "permissions": [
     "storage",
     "activeTab",
     "scripting",
@@ -15,8 +13,7 @@
     "identity",
     "notifications"
   ],
-  
-    "commands": {
+  "commands": {
     "toggle-dictation": {
       "suggested_key": {
         "default": "Alt+Shift+D",
@@ -25,36 +22,37 @@
       "description": "Start or stop dictation."
     }
   },
-
   "host_permissions": [
     "https://asia-northeast1-handsfreetype.cloudfunctions.net/*"
   ],
-
   "oauth2": {
     "client_id": "3445912363-j8esr7apo0jqr8ch87t9odau6l71jhj7.apps.googleusercontent.com",
-    "scopes": ["email", "profile", "openid"]
+    "scopes": [
+      "email",
+      "profile",
+      "openid"
+    ]
   },
-
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' https://www.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://asia-northeast1-handsfreetype.cloudfunctions.net https://*.firebaseapp.com"
   },
-
   "background": {
     "service_worker": "dist/background.js"
   },
-
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["dist/content.js"]
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "dist/content.js"
+      ]
     }
   ],
-
   "action": {
     "default_popup": "popup.html",
     "default_icon": "icon.png"
   },
-
   "web_accessible_resources": [
     {
       "resources": [
@@ -63,14 +61,15 @@
         "request-mic.html",
         "request-mic.js"
       ],
-      "matches": ["<all_urls>"]
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ],
-
-	"icons": {
-		"16": "icon16.png",
-		"32": "icon32.png",
-		"48": "icon48.png",
-		"128": "icon.png"
-	}
+  "icons": {
+    "16": "icon16.png",
+    "32": "icon32.png",
+    "48": "icon48.png",
+    "128": "icon.png"
+  }
 }

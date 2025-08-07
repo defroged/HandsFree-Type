@@ -65,6 +65,15 @@ exports.canStart = onRequest({ region: "asia-northeast1" }, async (req, res) => 
   try {
     const uid = await verifyIdToken(req);
     const user = (await db.doc(`users/${uid}`).get()).data() || {};
+	
+	    // Get user details to check the email
+    const authUser = await admin.auth().getUser(uid);
+    if (authUser.email === "defroged@gmail.com") {
+      console.log("Developer access granted.");
+      // Return a very large number of seconds to simulate an unlimited plan
+      return res.json({ plan: "pro", remainingSeconds: 9999999 });
+    }
+	
     const plan = user.plan === "pro" ? "pro" : "free";
     const yyyyMM = ymKey();
     const usageRef = db.doc(`usage/${uid}/months/${yyyyMM}`);

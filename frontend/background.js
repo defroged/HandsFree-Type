@@ -338,6 +338,25 @@ async function apiPost(path, body = {}) {
 async function toggleRecordingState() {
   if (!isRecording) {
     try {
+      const tabId = await getPasteTargetTabId();
+      if (!tabId) {
+        showErrorNotification('Could not find a tab to dictate into.');
+        return;
+      }
+      
+      // Inject the content script programmatically.
+      // This is allowed because the user triggered this via a command.
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tabId },
+          files: ['dist/content.js']
+        });
+      } catch (e) {
+        // This can fail on special pages like chrome://, which is expected.
+        // We can log it and continue; subsequent messages will fail gracefully.
+        console.log(`Could not inject script into tab ${tabId}: ${e.message}`);
+      }
+
       // Check if user can start before doing anything else
       const { plan, remainingSeconds } = await apiGet('/canStart');
       lastKnownRemainingSeconds = remainingSeconds; // Cache the latest value
@@ -346,13 +365,7 @@ async function toggleRecordingState() {
         const planName = plan === 'pro' ? 'Pro' : 'Free';
         const message = `You've used up all your transcription time for the ${planName} plan this month. You can wait until next month or upgrade now to continue.`;
         
-        const tabId = await getPasteTargetTabId();
-        if (tabId) {
-          await sendToTab(tabId, { type: "ui-show-error-bar", text: message });
-        } else {
-            // Fallback to a notification if we can't find a tab to show the bar on
-            showInfoNotification('Usage Limit Reached', message);
-        }
+        await sendToTab(tabId, { type: "ui-show-error-bar", text: message });
         
         await setBadge("0");
         return;
@@ -361,9 +374,10 @@ async function toggleRecordingState() {
       const granted = await ensureMicPermission();
       if (!granted) {
         pendingStartAfterPermission = true;
+        // The pendingTargetTabId is already set by the command listener.
         return;
       }
-      await startOffscreenRecording(targetTabId);
+      await startOffscreenRecording(tabId);
     } catch (e) {
       showErrorNotification(`Could not verify usage: ${e.message}`);
       await setBadge("ERR");

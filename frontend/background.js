@@ -6,7 +6,8 @@ import {
   GoogleAuthProvider,
   signInWithCredential,
   onAuthStateChanged,
-  signOut
+  signOut,
+  indexedDBLocalPersistence
 } from 'firebase/auth';
 
 const firebaseConfig = {
@@ -15,8 +16,10 @@ const firebaseConfig = {
   projectId : 'handsfreetype'
 };
 
-initializeApp(firebaseConfig);
-const auth = getAuth();
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app, {
+    persistence: indexedDBLocalPersistence
+});
 
 // --- Centralized Auth State ---
 let currentUser = null;

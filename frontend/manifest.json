@@ -5,7 +5,6 @@
   "description": "HandsFree Type: multilingual speech-to-text dictation on any site. Press Alt+Shift+D to easily start or stop voice recording.",
   "minimum_chrome_version": "116",
   "permissions": [
-    "storage",
     "activeTab",
     "scripting",
     "offscreen",

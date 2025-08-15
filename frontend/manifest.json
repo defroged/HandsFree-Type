@@ -2,6 +2,7 @@
   "manifest_version": 3,
   "name": "HandsFree Type",
   "version": "1.0",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3kEHH/mPvH/0b5G5KsKSi+MxQBl1outZcdJAEDW2RJ2qbhgkIAKAJBOVEwz35Ty6FvUBiA32PVuCSFZJ5MNHpvbApDO2+sxr62Hgyv31gXZCe5iq5KJArp6lBu9kmXay1+iQVsV8rBs16gEMjn3vvGW/C4q6GeA0Favm75a3Gp58seW+HYORqTrmGHvMTIpOYja6uqF7Nfd+yvZW6z03n+R1Aplp0o5OC5T07TR6lHm8iX0mrI1fMyrmm+hxQ06gOJpk5iVy+h1ZJ378i189W2a/KVQ4KVxJuPAp9AvgQtLMOmDfKrxumsKayGG5UrZgZOWUPWpE+5n26oq0eplRpQIDAQAB",
   "description": "HandsFree Type: multilingual speech-to-text dictation on any site. Press Alt+Shift+D to easily start or stop voice recording.",
   "minimum_chrome_version": "116",
   "permissions": [

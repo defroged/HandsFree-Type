@@ -7,6 +7,7 @@ let streamRef;
 
 function stopAndFlush() {
   if (stopped) return;
+  console.log(`[${Date.now()}] stopAndFlush called`);
   stopped = true;
   try {
     if (recorder && recorder.state === "recording") recorder.stop();
@@ -23,6 +24,7 @@ chrome.runtime.onMessage.addListener((msg) => {
 });
 
 (async function startRecording() {
+  console.log(`[${Date.now()}] offscreen.js: startRecording`);
   if (recorder?.state === "recording") {
     console.warn("[offscreen] Already recording.");
     return;
@@ -53,6 +55,8 @@ chrome.runtime.onMessage.addListener((msg) => {
     };
 
     recorder.onstop = async () => {
+      const stopTime = Date.now();
+      console.log(`[${stopTime}] recorder.onstop called`);
       const cleanup = () => {
         try { streamRef?.getTracks().forEach(t => t.stop()); } catch {}
         recorder = null;
@@ -82,7 +86,7 @@ chrome.runtime.onMessage.addListener((msg) => {
           reader.readAsDataURL(audioBlob);
         });
 
-        console.log("[offscreen] onstop, blob size:", audioBlob.size, "b64 len:", b64.length);
+        console.log(`[${Date.now()}] onstop, blob size: ${audioBlob.size}, b64 len: ${b64.length}, processing took ${Date.now() - stopTime}ms`);
         
         chrome.runtime.sendMessage({
           type: "audio-ready-b64",
@@ -110,7 +114,7 @@ chrome.runtime.onMessage.addListener((msg) => {
 
     audioChunks = [];
     recorder.start(250); // periodic chunks
-    console.log("[offscreen] Recording started. mimeType:", mimeType || "(default)");
+    console.log(`[${Date.now()}] Recording started. mimeType: ${mimeType || "(default)"}`);
     chrome.runtime.sendMessage({ type: "recording-started" });
   } catch (error) {
     console.error("[offscreen] getUserMedia failed:", error);

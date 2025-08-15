@@ -117,6 +117,7 @@ chrome.runtime.onInstalled.addListener(async () => {
 // ----------------- Commands -----------------
 chrome.commands.onCommand.addListener(async (command, tab) => {
   if (command === "toggle-dictation") {
+    console.log(`[${Date.now()}] Command received: toggle-dictation`);
     if (tab?.id) {
       targetTabId = tab.id;
       pendingTargetTabId = tab.id;
@@ -167,6 +168,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     // --- Offscreen recording transitions ---
     if (message?.type === "recording-started") {
+      console.log(`[${Date.now()}] Event received: recording-started from offscreen`);
       recordStartTs = Date.now();
       await setBadge("REC");
       await sendUIStarted(lastKnownRemainingSeconds);
@@ -174,6 +176,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     if (message?.type === "audio-ready-b64") {
+      console.log(`[${Date.now()}] Event received: audio-ready-b64 from offscreen`);
       const b64 = message.b64 || "";
       const size = message.size || 0;
 
@@ -268,14 +271,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // ----------------- API helpers -----------------
 async function apiGet(path) {
+  const start = Date.now();
+  console.log(`[${start}] API GET request sent to: ${path}`);
   await authReadyPromise;
   const h = await getAuthHeaderOrNull();
   const r = await fetch(`${API_BASE}${path}`, { headers: { ...h } });
   if (!r.ok) throw new Error(`GET ${path} ${r.status}`);
-  return r.json();
+  const result = await r.json();
+  console.log(`[${Date.now()}] API GET response from ${path} received in ${Date.now() - start}ms`);
+  return result;
 }
 
 async function apiPost(path, body = {}) {
+  const start = Date.now();
+  console.log(`[${start}] API POST request sent to: ${path}`);
   await authReadyPromise;
   const h = await getAuthHeaderOrNull();
   const r = await fetch(`${API_BASE}${path}`, {
@@ -289,11 +298,14 @@ async function apiPost(path, body = {}) {
     try { msg = JSON.parse(txt).error || msg; } catch {}
     throw new Error(`POST ${path} ${r.status}: ${msg}`);
   }
-  return JSON.parse(txt);
+  const result = JSON.parse(txt);
+  console.log(`[${Date.now()}] API POST response from ${path} received in ${Date.now() - start}ms`);
+  return result;
 }
 
 // ----------------- Start/Stop control -----------------
 async function toggleRecordingState() {
+  console.log(`[${Date.now()}] toggleRecordingState called. isRecording: ${isRecording}`);
   if (!isRecording) {
     try {
       const tabId = await getPasteTargetTabId();
@@ -316,7 +328,11 @@ async function toggleRecordingState() {
       }
 
       const granted = await ensureMicPermission();
-      if (!granted) { pendingStartAfterPermission = true; return; }
+      if (!granted) {
+        console.log(`[${Date.now()}] Mic permission not granted, pending start.`);
+        pendingStartAfterPermission = true;
+        return;
+      }
       await startOffscreenRecording(tabId);
     } catch (e) {
       showErrorNotification(`Could not verify usage: ${e.message}`);
@@ -339,6 +355,7 @@ async function ensureMicPermission() {
 }
 
 async function startOffscreenRecording(tabIdFromCaller) {
+  console.log(`[${Date.now()}] startOffscreenRecording called`);
   if (creatingOffscreen) return;
   creatingOffscreen = true;
   try {
@@ -352,11 +369,13 @@ async function startOffscreenRecording(tabIdFromCaller) {
     }
 
     if (!(await chrome.offscreen.hasDocument())) {
+      console.log(`[${Date.now()}] Creating offscreen document`);
       await chrome.offscreen.createDocument({
         url: "offscreen.html",
         reasons: ["USER_MEDIA"],
         justification: "Recording audio for transcription"
       });
+      console.log(`[${Date.now()}] Offscreen document created`);
     }
 
     isRecording = true;
@@ -371,6 +390,7 @@ async function startOffscreenRecording(tabIdFromCaller) {
 }
 
 async function stopOffscreenRecording() {
+  console.log(`[${Date.now()}] stopOffscreenRecording called`);
   if (!(await chrome.offscreen.hasDocument())) {
     isRecording = false;
     await stopBadgeAnimation();
@@ -384,7 +404,10 @@ async function stopOffscreenRecording() {
 
   const ok = await new Promise((resolve) => {
     pendingStopResolve = resolve;
-    try { chrome.runtime.sendMessage({ type: "stop-recording" }); } catch {}
+    try {
+      console.log(`[${Date.now()}] Sending stop-recording message to offscreen`);
+      chrome.runtime.sendMessage({ type: "stop-recording" });
+    } catch {}
     pendingStopTimer = setTimeout(() => {
       showErrorNotification("Recording timed out. Please try again.");
       pendingStopResolve = null;
@@ -404,7 +427,9 @@ async function stopOffscreenRecording() {
 async function closeOffscreenSafe() {
   try {
     if (await chrome.offscreen.hasDocument()) {
+      console.log(`[${Date.now()}] Closing offscreen document`);
       await chrome.offscreen.closeDocument();
+      console.log(`[${Date.now()}] Offscreen document closed`);
     }
   } catch (e) {
     if (!String(e?.message || "").includes('The offscreen document is not open.')) {
@@ -420,11 +445,13 @@ async function setBadge(text) {
 // ----------------- Transcription call -----------------
 async function processAudio(b64) {
   try {
+    console.log(`[${Date.now()}] Starting audio processing`);
     const result = await apiPost('/transcribeAudio', { b64 });
     if (result.error) throw new Error(result.error);
     const transcription = result.transcription;
     await stopBadgeAnimation("");
     await sendTextToContentScript(transcription || "");
+    console.log(`[${Date.now()}] Audio processing finished`);
   } catch (error) {
     showErrorNotification(`Transcription failed: ${error.message || 'Please check your internet connection and try again.'}`);
     await stopBadgeAnimation("ERR");

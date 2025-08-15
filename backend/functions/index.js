@@ -211,10 +211,11 @@ exports.stripeWebhook = onRequest({ secrets: ["STRIPE_SECRET", "STRIPE_WEBHOOK_S
 
 /* -------------------- Audio Transcription ----------------------- */
 exports.transcribeAudio = onRequest({ secrets: ["OPENAI_API_KEY"] }, async (req, res) => {
+  console.log(`[${Date.now()}] /transcribeAudio function started.`);
   res.set("Access-Control-Allow-Origin", "*");
   if (req.method === "OPTIONS") {
     res.set("Access-Control-Allow-Methods", "POST");
-    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.set("Access-control-allow-headers", "Content-Type, Authorization");
     return res.status(204).send("");
   }
 
@@ -236,17 +237,23 @@ exports.transcribeAudio = onRequest({ secrets: ["OPENAI_API_KEY"] }, async (req,
     form.append("response_format", "json");
 
     const headers = { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` };
+    
+    const start = Date.now();
+    console.log(`[${start}] Sending audio to OpenAI for transcription.`);
     const openaiRes = await fetch("https://api.openai.com/v1/audio/transcriptions", {
       method: "POST",
       headers,
       body: form,
     });
+    console.log(`[${Date.now()}] OpenAI response received in ${Date.now() - start}ms.`);
 
     const data = await openaiRes.json();
     if (!openaiRes.ok) {
       console.error("OpenAI error:", data);
       return res.status(openaiRes.status).json({ error: data.error?.message || "OpenAI request failed." });
     }
+    
+    console.log(`[${Date.now()}] /transcribeAudio function finished successfully.`);
     return res.json({ transcription: data.text });
   } catch (err) {
     console.error("Transcription function error:", err);

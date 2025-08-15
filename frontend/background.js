@@ -208,20 +208,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return;
       }
 
-      // Commit usage first
-      try {
-        if (recordStartTs) {
-          const elapsed = Math.max(0, Math.round((Date.now() - recordStartTs) / 1000));
-          await apiPost("/commitUsage", { elapsedSeconds: elapsed });
-        }
-      } catch {
-        showErrorNotification('Could not save your usage data. Please check your connection.');
-      } finally {
-        recordStartTs = null;
-        lastKnownRemainingSeconds = null;
-      }
-
       await processAudio(b64);
+      
+      // Fire-and-forget usage commit
+      if (recordStartTs) {
+        const elapsed = Math.max(0, Math.round((Date.now() - recordStartTs) / 1000));
+        apiPost("/commitUsage", { elapsedSeconds: elapsed }).catch(err => {
+            showErrorNotification('Could not save your usage data. Please check your connection.');
+        });
+      }
+      recordStartTs = null;
+      lastKnownRemainingSeconds = null;
+
       await cleanup();
       return;
     }
@@ -307,36 +305,53 @@ async function apiPost(path, body = {}) {
 async function toggleRecordingState() {
   console.log(`[${Date.now()}] toggleRecordingState called. isRecording: ${isRecording}`);
   if (!isRecording) {
+    const tabId = await getPasteTargetTabId();
+    if (!tabId) {
+      showErrorNotification('Could not find a tab to dictate into.');
+      return;
+    }
+
     try {
-      const tabId = await getPasteTargetTabId();
-      if (!tabId) { showErrorNotification('Could not find a tab to dictate into.'); return; }
-
-      try {
-        await chrome.scripting.executeScript({ target: { tabId }, files: ['dist/content.js'] });
-      } catch (e) { console.log(`Could not inject script into tab ${tabId}: ${e.message}`); }
-
-      // Ensure we have a token; if not signed in, /canStart will fail with 401
-      const { plan, remainingSeconds } = await apiGet('/canStart');
-      lastKnownRemainingSeconds = remainingSeconds;
-
-      if (remainingSeconds <= 0) {
-        const planName = plan === 'pro' ? 'Pro' : 'Free';
-        const message = `You've used up all your transcription time for the ${planName} plan this month. You can wait until next month or upgrade now to continue.`;
-        await sendToTab(tabId, { type: "ui-show-error-bar", text: message });
-        await setBadge("0");
-        return;
-      }
-
-      const granted = await ensureMicPermission();
-      if (!granted) {
-        console.log(`[${Date.now()}] Mic permission not granted, pending start.`);
-        pendingStartAfterPermission = true;
-        return;
-      }
-      await startOffscreenRecording(tabId);
+      await chrome.scripting.executeScript({ target: { tabId }, files: ['dist/content.js'] });
     } catch (e) {
+      console.log(`Could not inject script into tab ${tabId}: ${e.message}`);
+    }
+
+    // Fire off /canStart and mic permission in parallel
+    const canStartPromise = apiGet('/canStart').catch(e => {
       showErrorNotification(`Could not verify usage: ${e.message}`);
-      await setBadge("ERR");
+      setBadge("ERR");
+      return null;
+    });
+
+    const permissionGranted = await ensureMicPermission();
+
+    if (!permissionGranted) {
+      console.log(`[${Date.now()}] Mic permission not granted, will start if/when it is.`);
+      pendingStartAfterPermission = true;
+    }
+
+    // Now, wait for the API call to complete
+    const canStartResult = await canStartPromise;
+
+    if (!canStartResult) {
+      // Error already shown
+      return;
+    }
+
+    const { plan, remainingSeconds } = canStartResult;
+    lastKnownRemainingSeconds = remainingSeconds;
+
+    if (remainingSeconds <= 0) {
+      const planName = plan === 'pro' ? 'Pro' : 'Free';
+      const message = `You've used up all your transcription time for the ${planName} plan this month. You can wait until next month or upgrade now to continue.`;
+      await sendToTab(tabId, { type: "ui-show-error-bar", text: message });
+      await setBadge("0");
+      return;
+    }
+
+    if (permissionGranted) {
+      await startOffscreenRecording(tabId);
     }
   } else {
     await stopOffscreenRecording();
